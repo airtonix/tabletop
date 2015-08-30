@@ -28,7 +28,8 @@
 	var ttIndexOf = function(array, item) {
 		var i = 0,
 			l = array.length;
-		if (indexOfProto && array.indexOf === indexOfProto) return array.indexOf(item);
+		if (indexOfProto && array.indexOf === indexOfProto) return array.indexOf(
+			item);
 		for (; i < l; i++)
 			if (array[i] === item) return i;
 		return -1;
@@ -66,7 +67,8 @@
 		this.simple_url = !!options.simple_url;
 		this.callbackContext = options.callbackContext;
 		// Default to on, unless there's a proxy, in which case it's default off
-		this.prettyColumnNames = typeof(options.prettyColumnNames) == 'undefined' ? !options.proxy : options.prettyColumnNames
+		this.prettyColumnNames = typeof(options.prettyColumnNames) == 'undefined' ?
+			!options.proxy : options.prettyColumnNames;
 		this.authkey = options.authkey;
 		if (typeof(options.proxy) !== 'undefined') {
 			// Remove trailing slash, it will break the app
@@ -86,11 +88,14 @@
 		}
 		/* Be friendly about what you accept */
 		if (/key=/.test(this.key)) {
-			this.log("You passed an old Google Docs url as the key! Attempting to parse.");
+			this.log(
+				"You passed an old Google Docs url as the key! Attempting to parse.");
 			this.key = this.key.match("key=(.*?)(&|#|$)")[1];
 		}
 		if (/pubhtml/.test(this.key)) {
-			this.log("You passed a new Google Spreadsheets url as the key! Attempting to parse.");
+			this.log(
+				"You passed a new Google Spreadsheets url as the key! Attempting to parse."
+			);
 			this.key = this.key.match("d\\/(.*?)\\/pubhtml")[1];
 		}
 		if (!this.key) {
@@ -100,10 +105,12 @@
 		this.log("Initializing with key " + this.key);
 		this.models = {};
 		this.model_names = [];
-		if (this.authkey) {
-			this.base_json_path = "/feeds/worksheets/" + this.key + "/private/full?alt=";
+		if (this.key) {
+			this.base_json_path = "/feeds/worksheets/" + this.key +
+				"/private/full?alt=";
 		} else {
-			this.base_json_path = "/feeds/worksheets/" + this.key + "/public/full?alt=";
+			this.base_json_path = "/feeds/worksheets/" + this.key +
+				"/public/full?alt=";
 		}
 		if (inNodeJS || supportsCORS) {
 			this.base_json_path += 'json';
@@ -111,7 +118,7 @@
 			this.base_json_path += 'json-in-script';
 		}
 		if (this.authkey) {
-			this.base_json_path += '&oauth_token=' + this.authkey
+			this.base_json_path += '&access_token=' + this.authkey;
 		}
 		if (!this.wait) {
 			this.fetch();
@@ -120,12 +127,20 @@
 	// A global storage for callbacks.
 	Tabletop.callbacks = {};
 	// Backwards compatibility.
+
 	Tabletop.init = function(options) {
 		return new Tabletop(options);
 	};
+
+	/**
+	 * Return list of available spreadsheets
+	 * @return {JSON} [description]
+	 */
 	Tabletop.sheets = function() {
-		this.log("Times have changed! You'll want to use var tabletop = Tabletop.init(...); tabletop.sheets(...); instead of Tabletop.sheets(...)");
+		var url = 'https://spreadsheets.google.com/feeds/spreadsheets/private/full';
+		this.requestData(url, this.loadSheets);
 	};
+
 	Tabletop.prototype = {
 		fetch: function(callback) {
 			if (typeof(callback) !== "undefined") {
@@ -137,8 +152,8 @@
 		/***
 		 * Add oAuth Token
 		 */
-		addAuthKey: function(authkey){
-		  this.authkey = authkey;
+		addAuthKey: function(authkey) {
+			this.authkey = authkey;
 		},
 
 		/*
@@ -169,8 +184,9 @@
 			xhr.open("GET", this.endpoint + path);
 			var self = this;
 			xhr.onload = function() {
+				var json;
 				try {
-					var json = JSON.parse(xhr.responseText);
+					json = JSON.parse(xhr.responseText);
 				} catch (e) {
 					console.error(e);
 				}
@@ -228,7 +244,7 @@
 	  This will only run if tabletop is being run in node.js
 	*/
 		serverSideFetch: function(path, callback) {
-			var self = this
+			var self = this;
 			request({
 				url: this.endpoint + path,
 				json: true
@@ -264,7 +280,9 @@
 			}
 			if (this.simpleSheet) {
 				if (this.model_names.length > 1 && this.debug) {
-					this.log("WARNING You have more than one sheet but are using simple sheet mode! Don't blame me when something goes wrong.");
+					this.log(
+						"WARNING You have more than one sheet but are using simple sheet mode! Don't blame me when something goes wrong."
+					);
 				}
 				return this.models[this.model_names[0]].all();
 			} else {
@@ -296,11 +314,11 @@
 				// Only pull in desired sheets to reduce loading
 				if (this.isWanted(data.feed.entry[i].content.$t)) {
 					var sheet_id = data.feed.entry[i].id.$t.split('/').pop();
-					var json_path = "/feeds/list/" + this.key + "/" + sheet_id
+					var json_path = "/feeds/list/" + this.key + "/" + sheet_id;
 					if (this.authkey) {
-						json_path += "/private/full?alt="
+						json_path += "/private/full?alt=";
 					} else {
-						json_path += "/public/full?alt="
+						json_path += "/public/full?alt=";
 					}
 					if (inNodeJS || supportsCORS) {
 						json_path += 'json';
@@ -317,7 +335,7 @@
 						json_path += "&reverse=true";
 					}
 					if (this.authkey) {
-						json_path += '&oauth_token=' + this.authkey
+						json_path += '&access_token=' + this.authkey;
 					}
 					toLoad.push(json_path);
 				}
@@ -397,7 +415,7 @@
 	Options should be in the format { data: XXX }, with XXX being the list-based worksheet
   */
 	Tabletop.Model = function(options) {
-		var i, j, ilen, jlen;
+		var i, ilen;
 		this.column_names = [];
 		this.name = options.data.feed.title.$t;
 		this.tabletop = options.tabletop;
@@ -405,7 +423,8 @@
 		this.onReady = options.onReady;
 		this.raw = options.data; // A copy of the sheet's raw data, for accessing minutiae
 		if (typeof(options.data.feed.entry) === 'undefined') {
-			options.tabletop.log("Missing data for " + this.name + ", make sure you didn't forget column headers");
+			options.tabletop.log("Missing data for " + this.name +
+				", make sure you didn't forget column headers");
 			this.original_columns = [];
 			this.elements = [];
 			this.onReady.call(this);
@@ -421,7 +440,8 @@
 			for (var j = 0, jlen = this.column_names.length; j < jlen; j++) {
 				var cell = source["gsx$" + this.column_names[j]];
 				if (typeof(cell) !== 'undefined') {
-					if (options.parseNumbers && cell.$t !== '' && !isNaN(cell.$t)) element[this.column_names[j]] = +cell.$t;
+					if (options.parseNumbers && cell.$t !== '' && !isNaN(cell.$t)) element[
+						this.column_names[j]] = +cell.$t;
 					else element[this.column_names[j]] = cell.$t;
 				} else {
 					element[this.column_names[j]] = '';
@@ -443,10 +463,17 @@
 		},
 		fetchPrettyColumns: function() {
 			if (!this.raw.feed.link[3]) return this.ready();
-			var cellurl = this.raw.feed.link[3].href.replace('/feeds/list/', '/feeds/cells/').replace('https://spreadsheets.google.com', '');
+			var cellurl = this.raw.feed.link[3].href
+				.replace('/feeds/list/', '/feeds/cells/')
+				.replace('https://spreadsheets.google.com', '');
+
+			if (this.tabletop.authkey) {
+				cellurl += '&access_token=' + this.tabletop.authkey;
+			}
+
 			var that = this;
 			this.tabletop.requestData(cellurl, function(data) {
-				that.loadPrettyColumns(data)
+				that.loadPrettyColumns(data);
 			});
 		},
 		ready: function() {
@@ -482,7 +509,7 @@
 			var pretty_elements = [],
 				ordered_pretty_names = [],
 				i, j, ilen, jlen;
-			var ordered_pretty_names;
+
 			for (j = 0, jlen = this.column_names.length; j < jlen; j++) {
 				ordered_pretty_names.push(this.pretty_columns[this.column_names[j]]);
 			}
